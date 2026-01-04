@@ -1,1 +1,558 @@
+> Фразы:
+background: linear-gradient(to bottom, #81ecec, #00cec9);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #fff;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+        }
+        .fish-display { font-size: 60px; animation: bounce 1s infinite; display: none; margin-bottom: 10px; }
+        .fishing-status { font-size: 16px; color: #006266; font-weight: bold; text-align: center; padding: 0 10px; }
 
+        /* --- КНОПКИ УПРАВЛЕНИЯ --- */
+        .controls { width: 90%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .btn {
+            padding: 15px; border: none; border-radius: 10px;
+            font-weight: bold; font-size: 16px; cursor: pointer;
+            color: white; width: 100%; text-transform: uppercase;
+        }
+        .btn-green { background: #27ae60; box-shadow: 0 4px 0 #219150; }
+        .btn-blue { background: #0984e3; box-shadow: 0 4px 0 #0762a8; }
+        .btn-red { background: #c0392b; box-shadow: 0 4px 0 #96281b; }
+        .btn:disabled { background: #95a5a6; box-shadow: none; cursor: not-allowed; }
+        
+        /* --- МОДАЛКА (ВЫВОД) --- */
+        .modal {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            justify-content: center; align-items: center;
+            animation: fadeIn 0.3s;
+        }
+        .modal-content {
+            background: #1c252e; padding: 25px; border-radius: 15px;
+            text-align: center; width: 85%; border: 2px solid #0984e3;
+            box-shadow: 0 0 20px rgba(9, 132, 227, 0.5);
+        }
+        .modal h2 { margin-top: 0; color: white; }
+        .reg-link {
+            display: block; margin-top: 15px; padding: 15px;
+            background: #2ecc71; color: white; text-decoration: none;
+            border-radius: 8px; font-weight: bold; animation: pulse 1.5s infinite;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #219150;
+        }
+        .reg-link:active { transform: translateY(2px); box-shadow: 0 2px 0 #219150; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div id="page-title" style="font-weight:bold;">Меню</div>
+        <div class="balance-box"><span id="balance">1000</span> ₽</div>
+    </div>
+
+    <div id="screen-menu" class="screen active">
+        <div class="menu-grid">
+            <div class="game-card" onclick="openGame('mines')">
+                <span class="game-icon">💣</span>
+                <div class="game-title">MINES</div>
+            </div>
+            <div class="game-card" onclick="openGame('tower')">
+                <span class="game-icon">🏰</span>
+                <div class="game-title">TOWER</div>
+            </div>
+            <div class="game-card" onclick="openGame('fishing')">
+                <span class="game-icon">🎣</span>
+                <div class="game-title">FISHING</div>
+            </div>
+        </div>
+        <div style="margin-top: 40px; text-align: center;">
+            <a href="#" id="bonus-btn-menu" class="btn-green" style="padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 14px;">🎁 ПОЛУЧИТЬ БОНУС</a>
+        </div>
+    </div>
+
+    <div id="screen-mines" class="screen">
+        <div id="mines-grid"></div>
+        <div class="controls">
+            <button class="btn btn-green" id="mines-btn" onclick="minesAction()">СТАВКА 100 ₽</button>
+            <button class="btn btn-red" onclick="showMenu()">НАЗАД В МЕНЮ</button>
+        </div>
+    </div>
+
+> Фразы:
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>1Win Games Promo</title>
+    <style>
+        /* --- ОБЩИЙ СТИЛЬ --- */
+        body {
+            background-color: #0f1923;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- ШАПКА --- */
+        .header {
+            width: 90%;
+            padding: 15px;
+            background: #1c252e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .balance-box {
+            color: #2ecc71;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* --- ЭКРАНЫ (МЕНЮ И ИГРЫ) --- */
+        .screen {
+            display: none; /* Скрываем все экраны по умолчанию */
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+        .active {
+            display: flex; /* Показываем активный экран */
+        }
+
+        /* --- ГЛАВНОЕ МЕНЮ --- */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 90%;
+        }
+        .game-card {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .game-card:active { transform: scale(0.95); }
+        .game-card:hover { border-color: #0984e3; }
+        .game-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+        .game-title { font-weight: bold; font-size: 14px; text-transform: uppercase; }
+
+        /* --- ИГРОВОЕ ПОЛЕ MINES --- */
+        #mines-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 20px;
+        }
+        .cell {
+            width: 55px; height: 55px;
+            background: #34495e;
+            border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; cursor: pointer;
+            box-shadow: 0 4px 0 #2c3e50;
+            transition: transform 0.1s;
+        }
+        .cell:active { transform: translateY(2px); box-shadow: 0 2px 0 #2c3e50; }
+        .cell.safe { background: #f39c12; box-shadow: 0 4px 0 #d35400; color: white; }
+        .cell.bomb { background: #e74c3c; box-shadow: 0 4px 0 #c0392b; }
+
+        /* --- ИГРОВОЕ ПОЛЕ TOWER --- */
+        #tower-grid {
+            display: flex;
+            flex-direction: column-reverse; /* Строим снизу вверх */
+            gap: 8px;
+            margin: 20px;
+        }
+        .tower-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 колонки */
+            gap: 10px;
+        }
+        .tower-cell {
+            width: 80px; height: 40px;
+            background: #34495e;
+            border-radius: 5px;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #2c3e50;
+            font-weight: bold;
+        }
+        .tower-cell.active-row { background: #0984e3; box-shadow: 0 3px 0 #0762a8; }
+        .tower-cell.success { background: #2ecc71; box-shadow: 0 3px 0 #27ae60; }
+        .tower-cell.fail { background: #e74c3c; box-shadow: 0 3px 0 #c0392b; }
+
+        /* --- ИГРОВОЕ ПОЛЕ FISHING --- */
+        .fishing-area {
+            width: 300px;
+            height: 200px;
+
+> Фразы:
+<div id="screen-tower" class="screen">
+        <div id="tower-grid"></div>
+        <div class="controls">
+            <button class="btn btn-green" id="tower-btn" onclick="towerStart()">СТАВКА 100 ₽</button>
+            <button class="btn btn-red" onclick="showMenu()">НАЗАД В МЕНЮ</button>
+        </div>
+    </div>
+
+    <div id="screen-fishing" class="screen">
+        <div class="fishing-area">
+            <span id="fish-emoji" class="fish-display">🐟</span>
+            <div id="water-effect" class="fishing-status">Нажми Забросить</div>
+        </div>
+        <div class="controls">
+            <button class="btn btn-blue" id="fish-btn" onclick="fishAction()">🎣 ЗАБРОСИТЬ (100 ₽)</button>
+            <button class="btn btn-red" onclick="showMenu()">НАЗАД В МЕНЮ</button>
+        </div>
+    </div>
+
+    <div id="promo-modal" class="modal">
+        <div class="modal-content">
+            <h2>💰 КРУПНЫЙ ВЫИГРЫШ!</h2>
+            <p>Вы подняли <span id="win-amount" style="color:#f1c40f; font-weight:bold; font-size:20px;">0</span> ₽</p>
+            <p style="font-size: 13px; color:#bdc3c7; margin: 15px 0;">
+                Внимание! Демо-счет переполнен.<br>
+                Чтобы вывести реальные деньги на карту, необходим ID аккаунта.
+            </p>
+            
+            <a href="" id="partner-link" class="reg-link" target="_blank">ЗАБРАТЬ ВЫИГРЫШ</a>
+            
+            <button onclick="closeModal()" style="background:none; border:none; color:#7f8c8d; margin-top:15px; text-decoration: underline; cursor: pointer;">Продолжить демо</button>
+        </div>
+    </div>
+
+    <script>
+        // --- ТВОЯ ПАРТНЕРСКАЯ ССЫЛКА ---
+        const MY_REF_LINK = 'https://1wiojq.com/casino/list?open=register&p=e3yk';
+        
+        // Устанавливаем ссылку на все кнопки перехода
+        document.getElementById('partner-link').href = MY_REF_LINK;
+        document.getElementById('bonus-btn-menu').href = MY_REF_LINK;
+
+        // --- СОСТОЯНИЕ ---
+        let balance = 1000;
+        let currentGame = null; 
+        
+        // Переменные игр
+        let minesActive = false, minesWin = 0, minesBombs = [];
+        let towerActive = false, towerLevel = 0;
+        let fishStep = 0; // 0=start, 1=waiting, 2=pull
+
+        // --- ОБЩИЕ ФУНКЦИИ ---
+        function updateBalance() {
+            document.getElementById('balance').innerText = Math.floor(balance);
+        }
+
+        function showMenu() {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById('screen-menu').classList.add('active');
+            document.getElementById('page-title').innerText = "Главное Меню";
+            currentGame = null;
+            resetGames();
+        }
+
+        function openGame(game) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById('screen-' + game).classList.add('active');
+            currentGame = game;
+            
+            if(game === 'mines') {
+                document.getElementById('page-title').innerText = "Mines";
+                initMinesGrid();
+            } else if(game === 'tower') {
+                document.getElementById('page-title').innerText = "Tower Rush";
+                initTowerGrid();
+            } else if(game === 'fishing') {
+                document.getElementById('page-title').innerText = "Big Fishing";
+                resetFishing();
+            }
+        }
+
+        function checkBalance() {
+            if(balance < 100) {
+                alert("Демо-баланс закончился. Мы начислили еще 1000₽ для тренировки!");
+                balance = 1000;
+                updateBalance();
+                return false;
+            }
+            return true;
+        }
+
+        function showWinModal(amount) {
+            document.getElementById('win-amount').innerText = amount;
+            document.getElementById('promo-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('promo-modal').style.display = 'none';
+
+> Фразы:
+showMenu();
+        }
+
+        function resetGames() {
+            minesActive = false;
+            towerActive = false;
+            fishStep = 0;
+            
+            // Сброс кнопок
+            document.getElementById('mines-btn').innerText = "СТАВКА 100 ₽";
+            document.getElementById('mines-btn').className = "btn btn-green";
+            document.getElementById('tower-btn').innerText = "СТАВКА 100 ₽";
+            document.getElementById('tower-btn').className = "btn btn-green";
+        }
+
+        // ================= MINES LOGIC =================
+        function initMinesGrid() {
+            const grid = document.getElementById('mines-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.onclick = () => clickMine(i, cell);
+                grid.appendChild(cell);
+            }
+        }
+
+        function minesAction() {
+            if(minesActive) {
+                // Забрать выигрыш
+                balance += minesWin;
+                updateBalance();
+                showWinModal(minesWin);
+                minesActive = false;
+            } else {
+                // Начать
+                if(!checkBalance()) return;
+                balance -= 100;
+                updateBalance();
+                minesActive = true;
+                minesWin = 0;
+                minesBombs = [];
+                // 3 мины
+                while(minesBombs.length < 3) {
+                    let r = Math.floor(Math.random()*25);
+                    if(!minesBombs.includes(r)) minesBombs.push(r);
+                }
+                initMinesGrid();
+                document.getElementById('mines-btn').innerText = "ЗАБРАТЬ: 0 ₽";
+                document.getElementById('mines-btn').className = "btn btn-blue";
+            }
+        }
+
+        function clickMine(i, cell) {
+            if(!minesActive⠵⠵⠵⠞⠞⠵⠵⠵⠺⠟⠵⠟⠟⠟⠵⠺⠺⠟⠞⠞⠞⠟⠵⠞⠟⠟⠺⠟⠵⠵⠞⠵⠟⠵⠟cell.classList.contains('bomb')) return;
+
+            if(minesBombs.includes(i)) {
+                cell.classList.add('bomb');
+                cell.innerText = '💣';
+                minesActive = false;
+                document.getElementById('mines-btn').innerText = "ИГРАТЬ СНОВА";
+                document.getElementById('mines-btn').className = "btn btn-green";
+                // Показать все мины
+                document.querySelectorAll('#mines-grid .cell').forEach((c, idx) => {
+                    if(minesBombs.includes(idx)) { c.classList.add('bomb'); c.innerText='💣'; }
+                });
+            } else {
+                cell.classList.add('safe');
+                cell.innerText = '💎';
+                // Множитель
+                minesWin += 50;
+                document.getElementById('mines-btn').innerText = ЗАБРАТЬ: ${minesWin} ₽;
+            }
+        }
+
+        // ================= TOWER LOGIC =================
+        function initTowerGrid() {
+            const grid = document.getElementById('tower-grid');
+            grid.innerHTML = '';
+            for(let r=0; r<5; r++) { // 0 - низ, 4 - верх
+                let row = document.createElement('div');
+                row.className = 'tower-row';
+                row.id = row-${r};
+                for(let c=0; c<3; c++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'tower-cell';
+                    cell.onclick = () => clickTower(r, c, cell);
+                    cell.innerText = '❓';
+                    row.appendChild(cell);
+                }
+                grid.appendChild(row);
+            }
+        }
+
+        function towerStart() {
+            if(towerActive) {
+                // Cashout
+                let win = towerLevel * 200;
+                balance += win; 
+                updateBalance();
+                showWinModal(win);
+                towerActive = false;
+                return;
+            }
+
+            if(!checkBalance()) return;
+            balance -= 100;
+            updateBalance();
+
+> Фразы:
+towerActive = true;
+            towerLevel = 0;
+            initTowerGrid();
+            updateTowerVisuals();
+            document.getElementById('tower-btn').innerText = "ИГРА ИДЕТ...";
+            document.getElementById('tower-btn').className = "btn btn-blue";
+        }
+
+        function updateTowerVisuals() {
+            for(let r=0; r<5; r++) {
+                let rowCells = document.getElementById(`row-${r}`).children;
+                for(let c of rowCells) {
+                    if(r === towerLevel && towerActive) {
+                        c.classList.add('active-row');
+                        c.style.opacity = '1';
+                    } else {
+                        c.classList.remove('active-row');
+                        c.style.opacity = (r < towerLevel) ? '0.5' : '1';
+                    }
+                }
+            }
+        }
+
+        function clickTower(r, c, cell) {
+            if(!towerActive) return;
+            if(r !== towerLevel) return; 
+
+            // Шанс проигрыша 30%
+            let isBomb = Math.random() < 0.3;
+
+            if(isBomb) {
+                cell.classList.add('fail');
+                cell.innerText = '💥';
+                towerActive = false;
+                document.getElementById('tower-btn').innerText = "ПОПРОБОВАТЬ СНОВА";
+                document.getElementById('tower-btn').className = "btn btn-green";
+            } else {
+                cell.classList.add('success');
+                cell.innerText = '⭐';
+                towerLevel++;
+                if(towerLevel >= 5) {
+                    // Победа полная
+                    towerActive = false;
+                    let win = 1500; 
+                    balance += win;
+                    updateBalance();
+                    showWinModal(win);
+                } else {
+                    updateTowerVisuals();
+                    document.getElementById('tower-btn').innerText = ЗАБРАТЬ: ${towerLevel * 200} ₽;
+                }
+            }
+        }
+
+        // ================= FISHING LOGIC =================
+        function resetFishing() {
+            fishStep = 0;
+            document.getElementById('fish-emoji').style.display = 'none';
+            document.getElementById('water-effect').innerText = "Нажми Забросить";
+            document.getElementById('water-effect').style.color = "#006266";
+            document.getElementById('fish-btn').innerText = "🎣 ЗАБРОСИТЬ (100 ₽)";
+            document.getElementById('fish-btn').className = "btn btn-blue";
+            document.getElementById('fish-btn').disabled = false;
+        }
+
+        function fishAction() {
+            const btn = document.getElementById('fish-btn');
+            const status = document.getElementById('water-effect');
+            const emoji = document.getElementById('fish-emoji');
+
+            if(fishStep === 0) { // Старт
+                if(!checkBalance()) return;
+                balance -= 100;
+                updateBalance();
+                
+                status.innerText = "Ждем поклевку...";
+                btn.innerText = "⏳ ЖДИ...";
+                btn.className = "btn";
+                btn.disabled = true;
+                fishStep = 1;
+
+                // Случайная задержка 1.5-3.5 сек
+                setTimeout(() => {
+                    status.innerText = "❗ КЛЮЕТ! ТЯНИ! ❗";
+                    status.style.color = "#d35400";
+                    btn.innerText = "🎣 ТЯНУТЬ!";
+                    btn.className = "btn btn-green";
+                    btn.disabled = false;
+                    fishStep = 2;
+                }, 1500 + Math.random()*2000);
+
+            } else if(fishStep === 2) { // Вытягиваем
+                let win = 0;
+                let rand = Math.random();
+                
+                emoji.style.display = 'block';
+                
+                if(rand > 0.85) { // 15% шанс на крупную рыбу
+                    emoji.innerText = '🦈';
+                    status.innerText = "ДЖЕКПОТ! АКУЛА!";
+                    status.style.color = "#c0392b";
+                    win = 2000;
+
+> Фразы:
+} else if(rand > 0.4) { // 45% Обычная рыба
+                    emoji.innerText = '🐠';
+                    status.innerText = "Отличный улов!";
+                    status.style.color = "#27ae60";
+                    win = 400;
+                } else { // Мусор
+                    emoji.innerText = '👞';
+                    status.innerText = "Старый ботинок...";
+                    status.style.color = "#7f8c8d";
+                    win = 10;
+                }
+
+                if(win > 150) {
+                    setTimeout(() => showWinModal(win), 800);
+                }
+                
+                balance += win;
+                updateBalance();
+                
+                btn.innerText = "ЗАБРОСИТЬ СНОВА";
+                btn.className = "btn btn-blue";
+                fishStep = 0;
+            }
+        }
+    </script>
+</body>
+</html>
